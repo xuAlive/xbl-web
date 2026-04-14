@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+
+# env
+.env
+.env.*
+
+# logs
+*.log
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
