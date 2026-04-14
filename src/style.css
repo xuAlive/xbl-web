@@ -1,0 +1,303 @@
+*{
+  margin: 0px;
+  padding: 0px;
+  list-style: none;
+  text-decoration: none;
+  outline: none;
+  box-sizing: border-box;
+}
+@font-face {
+  font-family: xiaxingkai;
+  src: url("./assets/fonts/演示夏行楷.ttf");
+}
+
+:root {
+  --font-family-base: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-family-brand: xiaxingkai, "KaiTi", "STKaiti", cursive;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-family-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-family-base);
+}
+
+.el-message.xbl-feedback-message {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: 24px !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  min-width: min(420px, calc(100vw - 32px));
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(14px);
+  justify-content: center;
+  text-align: center;
+  z-index: 5000 !important;
+}
+
+.el-message.xbl-feedback-message .el-message__icon {
+  margin-right: 10px;
+}
+
+.el-message.xbl-feedback-message .el-message__content {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  word-break: break-word;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--success {
+  background: rgba(236, 253, 245, 0.96);
+  color: #047857;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--success .el-message__icon {
+  color: #059669;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--warning {
+  background: rgba(255, 251, 235, 0.97);
+  color: #b45309;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--warning .el-message__icon {
+  color: #d97706;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--info {
+  background: rgba(239, 246, 255, 0.97);
+  color: #1d4ed8;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--info .el-message__icon {
+  color: #2563eb;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--error {
+  background: rgba(254, 242, 242, 0.97);
+  color: #b91c1c;
+}
+
+.el-message.xbl-feedback-message.xbl-feedback-message--error .el-message__icon {
+  color: #dc2626;
+}
+
+.xbl-confirm-dialog {
+  position: relative;
+  width: min(700px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+  min-width: 0;
+  padding: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 20px 60px rgba(31, 41, 55, 0.12);
+}
+
+.el-overlay.is-message-box,
+.el-overlay-message-box {
+  position: fixed;
+  inset: 0;
+  display: block;
+  padding: 0 !important;
+  background: rgba(17, 24, 39, 0.26);
+  backdrop-filter: none;
+  z-index: 4000 !important;
+}
+
+.el-overlay.is-message-box .el-overlay-dialog,
+.el-overlay-message-box .el-overlay-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.el-overlay.is-message-box .el-message-box,
+.el-overlay-message-box .el-message-box {
+  margin: 0;
+  width: min(700px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+}
+
+.xbl-confirm-dialog .el-message-box__header {
+  background: #ffffff;
+  padding: 28px 72px 0 28px;
+  position: relative;
+}
+
+.xbl-confirm-dialog .el-message-box__title {
+  color: #22253d;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.xbl-confirm-dialog .el-message-box__status {
+  display: none;
+}
+
+.xbl-confirm-dialog .el-message-box__headerbtn {
+  top: 24px;
+  right: 26px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  background: transparent;
+  transition: color 0.2s ease;
+}
+
+.xbl-confirm-dialog .el-message-box__close {
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.xbl-confirm-dialog .el-message-box__headerbtn:hover {
+  background: transparent;
+  color: #6b7280;
+  transform: none;
+}
+
+.xbl-confirm-dialog .el-message-box__content {
+  background: #ffffff;
+  color: #374151;
+  padding: 18px 28px 0;
+}
+
+.xbl-confirm-dialog .el-message-box__message {
+  color: #2d3254;
+  line-height: 1.65;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.xbl-confirm-dialog .el-message-box__btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  background: #ffffff;
+  padding: 28px 28px 28px;
+  border-top: none;
+}
+
+.xbl-confirm-dialog .el-message-box__btns .el-button {
+  min-width: 142px;
+  height: 58px;
+  border-radius: 999px;
+  font-size: 17px;
+  font-weight: 600;
+  margin-left: 0;
+}
+
+.xbl-confirm-dialog .el-message-box__btns .xbl-confirm-cancel {
+  background: #ffffff;
+  color: #101010;
+  border: 1.5px solid #d7dbe8;
+}
+
+.xbl-confirm-dialog .el-message-box__btns .xbl-confirm-cancel:hover {
+  background: #ffffff;
+  color: #101010;
+  border-color: #bfc8e0;
+}
+
+.xbl-confirm-dialog .el-message-box__btns .xbl-confirm-danger {
+  background: #ff3b4d;
+  color: #ffffff;
+  border-color: #ff3b4d;
+}
+
+.xbl-confirm-dialog .el-message-box__btns .xbl-confirm-danger:hover {
+  background: #ff5262;
+  color: #ffffff;
+  border-color: #ff5262;
+}
+
+@media (max-width: 640px) {
+  .el-message.xbl-feedback-message {
+    top: 20px !important;
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    padding: 13px 16px;
+    border-radius: 16px;
+  }
+
+  .el-message.xbl-feedback-message .el-message__content {
+    font-size: 13px;
+  }
+
+  .xbl-confirm-dialog {
+    width: min(100%, calc(100vw - 24px));
+    min-width: 0;
+    border-radius: 24px;
+  }
+
+  .el-overlay.is-message-box .el-overlay-dialog,
+  .el-overlay-message-box .el-overlay-dialog {
+    padding: 12px;
+  }
+
+  .el-overlay.is-message-box .el-message-box,
+  .el-overlay-message-box .el-message-box {
+    width: min(100%, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+
+  .xbl-confirm-dialog .el-message-box__header {
+    padding: 24px 52px 0 22px;
+  }
+
+  .xbl-confirm-dialog .el-message-box__title {
+    font-size: 20px;
+  }
+
+  .xbl-confirm-dialog .el-message-box__headerbtn {
+    top: 20px;
+    right: 20px;
+  }
+
+  .xbl-confirm-dialog .el-message-box__content {
+    padding: 16px 22px 0;
+  }
+
+  .xbl-confirm-dialog .el-message-box__message {
+    font-size: 16px;
+  }
+
+  .xbl-confirm-dialog .el-message-box__btns {
+    gap: 12px;
+    padding: 24px 22px 22px;
+  }
+
+  .xbl-confirm-dialog .el-message-box__btns .el-button {
+    min-width: 0;
+    flex: 1;
+    height: 52px;
+  }
+}
