@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onActivated, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, EditPen, View, Document } from '@element-plus/icons-vue'
 import { listPublicArticles, type Article } from '@/api/article'
@@ -208,8 +208,13 @@ const goToPublish = () => {
 }
 
 onMounted(() => {
-  loadBlogList()
-  loadComments()
+  void loadBlogList()
+  void loadComments()
+})
+
+onActivated(() => {
+  void loadBlogList()
+  void loadComments()
 })
 </script>
 

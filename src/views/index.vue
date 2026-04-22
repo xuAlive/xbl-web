@@ -44,7 +44,7 @@
           background-color="#314a43"
           text-color="#fff"
           active-text-color="#ffd04b"
-          :router="true"
+          @select="handleTopMenuSelect"
       >
         <!-- 动态渲染顶部菜单（邮件、消息等） -->
         <template v-for="menu in topMenus" :key="menu.id">
@@ -66,7 +66,7 @@
             <div class="login-system-message__title">{{ loginSystemMessage.title }}</div>
             <div class="login-system-message__content">{{ loginSystemMessage.content }}</div>
           </div>
-          <button class="login-system-message__close" type="button" @click="loginSystemMessageVisible = false">
+          <button class="login-system-message__close" type="button" @click="closeLoginSystemMessage">
             x
           </button>
         </div>
@@ -92,7 +92,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, markRaw } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, markRaw, watch } from 'vue'
 import { HomeFilled, UserFilled, Tools, Message, ChatDotSquare, Avatar, House, Reading, Cellphone, Bell, Edit, HomeFilled as HomeFilledIcon, User, InfoFilled, Document, Menu as MenuIcon, Lock, Setting } from '@element-plus/icons-vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from '@/shared/ui/feedback'
@@ -162,6 +162,8 @@ const routePreloaders: Record<string, PageLoader> = {
   '/index/miniapp': () => import('@/modules/blog/views/MiniappCenterPage.vue'),
   '/index/miniappManage': () => import('@/modules/system/views/MiniappManagePage.vue'),
   '/index/deepseek': () => import('@/modules/blog/views/DeepseekPage.vue'),
+  '/index/bookCrawler': () => import('@/modules/crawler/views/BookCrawlerAppPage.vue'),
+  '/index/medicalKnowledge': () => import('@/modules/blog/views/MedicalKnowledgePage.vue'),
   '/index/mail': () => import('@/modules/system/views/MailPage.vue'),
   '/index/message': () => import('@/modules/system/views/MessagePage.vue'),
   '/index/blogInfo': () => import('@/modules/blog/views/BlogInfoPage.vue'),
@@ -224,6 +226,14 @@ const preloadAccessiblePages = () => {
   })
 }
 
+const closeLoginSystemMessage = () => {
+  loginSystemMessageVisible.value = false
+  if (systemMessageTimer) {
+    clearTimeout(systemMessageTimer)
+    systemMessageTimer = null
+  }
+}
+
 const showLoginSystemMessage = async () => {
   const shownKey = 'login_system_message_shown'
   if (sessionStorage.getItem(shownKey) === '1') {
@@ -244,9 +254,19 @@ const showLoginSystemMessage = async () => {
   }
 
   systemMessageTimer = window.setTimeout(() => {
-    loginSystemMessageVisible.value = false
+    closeLoginSystemMessage()
   }, 10000)
 }
+
+watch(
+  () => route.fullPath,
+  (newPath, oldPath) => {
+    if (!oldPath || newPath === oldPath || !loginSystemMessageVisible.value) {
+      return
+    }
+    closeLoginSystemMessage()
+  }
+)
 
 // 初始化加载菜单
 onMounted(() => {
@@ -264,14 +284,27 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('user-menus-updated', refreshMenus)
-  if (systemMessageTimer) {
-    clearTimeout(systemMessageTimer)
-  }
+  closeLoginSystemMessage()
 })
 
 const refreshMenus = () => {
   menus.value = getUserMenus()
   preloadAccessiblePages()
+}
+
+const handleTopMenuSelect = (index: string) => {
+  if (index === 'logout') {
+    return
+  }
+
+  if (index === 'feedback') {
+    message.info('问题反馈功能整理中')
+    return
+  }
+
+  if (index && route.path !== index) {
+    router.push(index)
+  }
 }
 
 // 退出登录处理函数
@@ -291,7 +324,7 @@ const handleLogout = () => {
     message.success('退出登录成功')
 
     // 跳转到登录页
-    router.push('/')
+    router.replace('/')
   })
 }
 </script>

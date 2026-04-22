@@ -70,11 +70,12 @@ const handleConfirm = () => {
   position: relative;
   width: min(620px, calc(100vw - 48px));
   max-width: calc(100vw - 48px);
-  min-height: 188px;
-  padding: 24px 24px 22px;
+  padding: 24px 24px 20px;
   border-radius: 24px;
   background: #ffffff;
   box-shadow: 0 20px 60px rgba(31, 41, 55, 0.12);
+  display: flex;
+  flex-direction: column;
 }
 
 .xbl-confirm-close {
@@ -94,10 +95,11 @@ const handleConfirm = () => {
   font-size: 18px;
   font-weight: 700;
   line-height: 1.35;
+  padding-right: 32px;
 }
 
 .xbl-confirm-message {
-  margin-top: 18px;
+  margin-top: 14px;
   color: #2d3254;
   font-size: 14px;
   font-weight: 600;
@@ -108,7 +110,7 @@ const handleConfirm = () => {
   display: flex;
   justify-content: flex-end;
   gap: 14px;
-  margin-top: 22px;
+  margin-top: 18px;
 }
 
 .xbl-confirm-button {
@@ -140,8 +142,7 @@ const handleConfirm = () => {
   .xbl-confirm-card {
     width: min(100%, calc(100vw - 24px));
     max-width: calc(100vw - 24px);
-    min-height: 0;
-    padding: 22px 18px 18px;
+    padding: 20px 18px 18px;
     border-radius: 20px;
   }
 
@@ -156,13 +157,13 @@ const handleConfirm = () => {
   }
 
   .xbl-confirm-message {
-    margin-top: 16px;
+    margin-top: 12px;
     font-size: 14px;
   }
 
   .xbl-confirm-actions {
     gap: 10px;
-    margin-top: 18px;
+    margin-top: 16px;
   }
 
   .xbl-confirm-button {

@@ -77,7 +77,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Promotion, ChatDotRound } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { setUserInfo, setUserRoleCode, setUserPermissions, setUserMenus, handleWechatCallback, isLoggedIn } from '@/mobile/utils/auth'
+import { setUserInfo, setUserRoleCode, setUserPermissions, setUserMenus, handleWechatCallback, isLoggedIn, getUrlParam, removeUrlParam } from '@/mobile/utils/auth'
 import { $post } from '@/mobile/utils/request'
 import { getUserRoleCode as fetchUserRoleCode } from '@/modules/mobile/system/api/role'
 import { getUserPermissions as fetchUserPermissions } from '@/modules/mobile/system/api/permission'
@@ -99,6 +99,66 @@ const rules: FormRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
+const resolveRedirectPath = () => {
+  const redirectPath = sessionStorage.getItem('redirect_path') || '/'
+  sessionStorage.removeItem('redirect_path')
+  return redirectPath
+}
+
+const syncUserSession = async (fallbackAccount = '') => {
+  try {
+    const userDetail = await getUserInfoByAccount()
+    setUserInfo({
+      account: userDetail?.account || fallbackAccount,
+      token: '',
+      name: userDetail?.name || '',
+      userName: userDetail?.userName || ''
+    })
+
+    const [roleCode, permissions, menus] = await Promise.all([
+      fetchUserRoleCode(),
+      fetchUserPermissions(),
+      fetchUserMenus()
+    ])
+
+    setUserRoleCode(roleCode)
+    setUserPermissions(permissions.map(p => p.permissionCode))
+    setUserMenus(menus)
+  } catch (error) {
+    console.error('同步用户会话失败:', error)
+  }
+}
+
+const finalizeLogin = async (token: string, fallbackAccount = '') => {
+  setUserInfo({
+    account: fallbackAccount,
+    token,
+    name: '',
+    userName: ''
+  })
+
+  void syncUserSession(fallbackAccount)
+
+  router.push(resolveRedirectPath())
+}
+
+const handleWechatLogin = async (authCode: string) => {
+  try {
+    const res = await $post(`/wechat/exchange?code=${encodeURIComponent(authCode)}`, {})
+    if (res.code !== 1 || !res.data) {
+      message.error(res.codeMessage || '微信登录失败')
+      return
+    }
+
+    const token = res.data
+    removeUrlParam('authCode')
+    await finalizeLogin(token)
+  } catch (error) {
+    console.error('微信登录失败:', error)
+    message.error('微信登录失败，请稍后重试')
+  }
+}
+
 const handleLogin = async () => {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
@@ -108,26 +168,7 @@ const handleLogin = async () => {
     const res = await $post('/sys/login', form)
     if (res.code === 1) {
       const token = res.data
-      const userDetail = await getUserInfoByAccount(form.account)
-      setUserInfo({
-        account: form.account,
-        token,
-        name: userDetail?.name || '',
-        userName: userDetail?.userName || ''
-      })
-
-      const roleCode = await fetchUserRoleCode()
-      setUserRoleCode(roleCode)
-
-      const permissions = await fetchUserPermissions()
-      setUserPermissions(permissions.map(p => p.permissionCode))
-
-      const menus = await fetchUserMenus()
-      setUserMenus(menus)
-
-      const redirectPath = sessionStorage.getItem('redirect_path') || '/'
-      sessionStorage.removeItem('redirect_path')
-      router.push(redirectPath)
+      await finalizeLogin(token, form.account)
     } else {
       message.error(res.codeMessage || '登录失败')
     }
@@ -140,9 +181,13 @@ const handleLogin = async () => {
 
 onMounted(() => {
   if (handleWechatCallback()) {
-    const redirectPath = sessionStorage.getItem('redirect_path') || '/'
-    sessionStorage.removeItem('redirect_path')
-    router.push(redirectPath)
+    router.push(resolveRedirectPath())
+    return
+  }
+
+  const authCode = getUrlParam('authCode')
+  if (authCode) {
+    void handleWechatLogin(authCode)
     return
   }
 

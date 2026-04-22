@@ -60,7 +60,7 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { $login, $register } from '@/modules/system/api/auth'
 import { getUserInfoByAccount } from '@/modules/system/api/user'
-import { setUserInfo, setUserMenus, setUserRoleCode, setUserPermissions } from '@/utils/userInfo'
+import { setUserInfo, setUserMenus, setUserRoleCode, setUserPermissions, getUrlParam, removeUrlParam } from '@/utils/userInfo'
 import { getUserMenus as fetchUserMenus } from '@/modules/system/api/menu'
 import { getUserRoleCode as fetchUserRoleCode } from '@/modules/system/api/role'
 import { getUserPermissions as fetchUserPermissions } from '@/modules/system/api/permission'
@@ -221,19 +221,14 @@ const handleWechatLogin = async (authCode: string) => {
   setUserPermissions(permissions.map((p: any) => p.permissionCode))
 
   sessionStorage.removeItem('login_system_message_shown')
-  const query = new URLSearchParams(window.location.search)
-  query.delete('authCode')
-  const cleanSearch = query.toString()
-  const cleanUrl = `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ''}${window.location.hash}`
-  window.history.replaceState({}, document.title, cleanUrl)
+  removeUrlParam('authCode')
   router.push('/index/home')
 }
 
 onMounted(() => {
-  const query = new URLSearchParams(window.location.search)
-  const authCode = query.get('authCode')
+  const authCode = getUrlParam('authCode')
   if (authCode) {
-    handleWechatLogin(authCode)
+    void handleWechatLogin(authCode)
   }
 })
 </script>

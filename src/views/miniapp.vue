@@ -53,7 +53,8 @@ import {
   Clock,
   DataBoard,
   Bell,
-  Notebook
+  Notebook,
+  Reading
 } from '@element-plus/icons-vue'
 import { getMiniappList, type Miniapp } from '../api/miniapp'
 
@@ -74,6 +75,7 @@ const iconMap: Record<string, any> = {
   'DataBoard': markRaw(DataBoard),
   'Bell': markRaw(Bell),
   'Notebook': markRaw(Notebook),
+  'Reading': markRaw(Reading),
 }
 
 // 获取图标组件

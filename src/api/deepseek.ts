@@ -1,36 +1,48 @@
-import {$get, $post} from "../utils/request";
+import { $get, $post } from '../utils/request'
+import { consumeSseResponse, createSsePostRequest } from '@/shared/http/sse'
 import { message } from '@/shared/ui/feedback'
 
-/**
- * 历史对话项接口
- */
 export interface DialogueHistory {
   dialogueId: number
   content: string
+  createTime?: string
 }
 
-/**
- * 对话消息接口
- */
-export interface Message {
+export interface DeepseekMessage {
   role: 'user' | 'assistant'
   content: string
-  dialogueId?: number
+  dialogueId: number
+  createTime?: string
 }
 
-/**
- * 发送消息响应接口
- */
-export interface SendCompletionResponse {
+export interface DeepseekStreamMeta {
+  dialogueId: number
+  model: string
+  role: 'assistant'
+  startedAt?: string
+}
+
+export interface DeepseekStreamChunk {
+  dialogueId: number
   role: string
   content: string
-  dialogueId: number
 }
 
-/**
- * 获取历史对话列表
- * @returns 历史对话列表
- */
+export interface DeepseekStreamDone {
+  dialogueId: number
+  role: 'assistant'
+  model: string
+  content: string
+  completedAt?: string
+}
+
+interface StreamHandlers {
+  onMeta?: (meta: DeepseekStreamMeta) => void
+  onDelta?: (chunk: DeepseekStreamChunk) => void
+  onDone?: (payload: DeepseekStreamDone) => void
+  onError?: (messageText: string, dialogueId?: number) => void
+}
+
 export const getCompletionHistoryList = async () => {
   try {
     const ret = await $get('/ds/getCompletionHistoryList', {})
@@ -48,17 +60,12 @@ export const getCompletionHistoryList = async () => {
   }
 }
 
-/**
- * 获取指定对话的完整消息列表
- * @param dialogueId 对话ID
- * @returns 消息列表
- */
 export const getCompletionList = async (dialogueId: number) => {
   try {
     const ret = await $get('/ds/getCompletionList', { dialogueId })
 
     if (ret.code === 1) {
-      return ret.data as Message[]
+      return ret.data as DeepseekMessage[]
     } else {
       message.error(ret.codeMessage || '获取对话详情失败')
       return []
@@ -70,39 +77,30 @@ export const getCompletionList = async (dialogueId: number) => {
   }
 }
 
-/**
- * 发送消息
- * @param content 消息内容
- * @param dialogueId 对话ID（首次为null）
- * @returns 响应数据
- */
-export const sendCompletion = async (content: string, dialogueId?: number | null) => {
-  try {
-    const params: any = {
-      content,
-      dialogueId: dialogueId || null
-    }
+export const sendCompletion = async (
+  content: string,
+  dialogueId?: number | null,
+  handlers: StreamHandlers = {},
+) => {
+  const response = await createSsePostRequest('/ds/sendCompletion', {
+    content,
+    dialogueId: dialogueId || null,
+  })
 
-    const ret = await $post('/ds/sendCompletion', JSON.stringify(params))
-
-    if (ret.code === 1) {
-      return ret.data as SendCompletionResponse
-    } else {
-      message.error(ret.codeMessage || '发送消息失败')
-      return null
+  await consumeSseResponse(response, ({ event, data }) => {
+    const payload = JSON.parse(data)
+    if (event === 'meta') {
+      handlers.onMeta?.(payload as DeepseekStreamMeta)
+    } else if (event === 'delta') {
+      handlers.onDelta?.(payload as DeepseekStreamChunk)
+    } else if (event === 'done') {
+      handlers.onDone?.(payload as DeepseekStreamDone)
+    } else if (event === 'error') {
+      handlers.onError?.((payload as { message?: string }).message || '发送消息失败', (payload as { dialogueId?: number }).dialogueId)
     }
-  } catch (error) {
-    console.error('发送消息失败:', error)
-    message.error('发送消息失败，请稍后重试')
-    return null
-  }
+  })
 }
 
-/**
- * 删除对话
- * @param dialogueId 对话ID
- * @returns 是否删除成功
- */
 export const deleteDialogue = async (dialogueId: number) => {
   try {
     const ret = await $post(`/ds/deleteDialogue`, { id: dialogueId })
@@ -121,10 +119,6 @@ export const deleteDialogue = async (dialogueId: number) => {
   }
 }
 
-/**
- * 获取对话数量
- * @returns 对话数量
- */
 export const getDialogueCount = async () => {
   try {
     const ret = await $get('/ds/getDialogueCount', {})
@@ -139,10 +133,6 @@ export const getDialogueCount = async () => {
   }
 }
 
-/**
- * 检查是否为管理员
- * @returns 是否为管理员
- */
 export const checkAdmin = async () => {
   try {
     const ret = await $get('/ds/checkAdmin', {})

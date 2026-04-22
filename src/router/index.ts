@@ -11,6 +11,8 @@ const alwaysAllowedAfterLogin = [
   '/index/accountInfo',
   '/index/miniapp',
   '/index/baziFortune',
+  '/index/bookCrawler',
+  '/index/medicalKnowledge',
   '/index/timesheet',
   '/index/schedule',
   '/index/calendar',
@@ -94,6 +96,16 @@ const router = createRouter({
           path: 'baziFortune',
           meta: { title: '八字运势', platform: 'pc', keepAlive: true },
           component: () => import('@/modules/blog/views/BaziFortunePage.vue'),
+        },
+        {
+          path: 'bookCrawler',
+          meta: { title: '书籍爬虫', platform: 'pc', keepAlive: true },
+          component: () => import('@/modules/crawler/views/BookCrawlerAppPage.vue'),
+        },
+        {
+          path: 'medicalKnowledge',
+          meta: { title: '医疗知识库', platform: 'pc', keepAlive: true },
+          component: () => import('@/modules/blog/views/MedicalKnowledgePage.vue'),
         },
         {
           path: 'mail',

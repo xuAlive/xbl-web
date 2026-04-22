@@ -1,5 +1,5 @@
 <template>
-  <div class="timesheet-page">
+  <div class="timesheet-page xbl-app-page xbl-app-page--timesheet">
     <el-card class="hero-card">
       <div class="hero-head">
         <div>

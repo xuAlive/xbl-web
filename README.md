@@ -138,16 +138,18 @@ xbl-web/
 统一使用的新配置字段：
 
 - `BLOG_API_URL`
+- `CRAWLER_API_URL`
 - `SCHEDULE_API_URL`
 - `CALENDAR_API_URL`
 - `TIMESHEET_API_URL`
 
 本地测试如果不走 Nginx，可以在 [`public/config.js`](/Users/xubaolin/IdeaProjects/xbl/xbl-web/public/config.js) 中切换为：
 
-- `http://127.0.0.1:6101/blog`
-- `http://127.0.0.1:6101/schedule`
-- `http://127.0.0.1:6101/calendar`
-- `http://127.0.0.1:6101/timesheet`
+- `http://127.0.0.1:6101/xbl/blog`
+- `http://127.0.0.1:6101/xbl/crawler`
+- `http://127.0.0.1:6101/xbl/schedule`
+- `http://127.0.0.1:6101/xbl/calendar`
+- `http://127.0.0.1:6101/xbl/timesheet`
 
 ## 运行与校验
 

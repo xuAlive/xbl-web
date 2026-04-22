@@ -1,580 +1,714 @@
 <template>
-  <div class="deepseek-container">
-    <el-container class="chat-layout">
-      <el-aside width="280px" class="history-aside">
-        <div class="history-header">
-          <h3>历史对话</h3>
-          <el-tooltip content="长按对话可删除" placement="bottom">
-            <el-button type="primary" size="small" @click="startNewChat" icon="Plus">
-              新对话
-            </el-button>
-          </el-tooltip>
+  <div class="deepseek-page">
+    <aside class="history-panel">
+      <div class="panel-header">
+        <div>
+          <h2>历史会话</h2>
         </div>
+        <el-button type="primary" class="new-chat-btn" @click="handleNewChat">
+          <el-icon><Plus /></el-icon>
+          新对话
+        </el-button>
+      </div>
 
-        <el-scrollbar class="history-scrollbar">
-          <div class="history-list">
-            <div
-              v-for="history in historyList"
-              :key="history.dialogueId"
-              class="history-item"
-              :class="{ active: currentDialogueId === history.dialogueId }"
-              @click="loadHistory(history.dialogueId)"
-              @mousedown="startLongPress(history.dialogueId)"
-              @mouseup="cancelLongPress"
-              @mouseleave="cancelLongPress"
-            >
-              <div class="history-content">
-                {{ history.content }}
-              </div>
-            </div>
+      <div class="history-tip">
+        <span>普通用户最多保留 {{ dialogueLimit }} 个会话</span>
+        <strong>{{ dialogueCount }}/{{ isAdmin ? '∞' : dialogueLimit }}</strong>
+      </div>
 
-            <el-empty
-              v-if="historyList.length === 0"
-              description="暂无历史对话"
-              :image-size="80"
-            />
-          </div>
-        </el-scrollbar>
-      </el-aside>
-
-      <el-main class="chat-main">
-        <div class="chat-content">
-          <el-scrollbar ref="scrollbarRef" class="message-scrollbar">
-            <div class="message-list">
-              <div
-                v-for="(message, index) in messages"
-                :key="index"
-                class="message-item"
-                :class="message.role"
-              >
-                <div class="message-avatar">
-                  <el-avatar v-if="message.role === 'user'" :size="36">
-                    用户
-                  </el-avatar>
-                  <el-avatar v-else :size="36" style="background-color: #409eff">
-                    AI
-                  </el-avatar>
-                </div>
-                <div class="message-bubble">
-                  <div class="message-content markdown-body" v-html="renderMarkdown(message.content)"></div>
-                </div>
-              </div>
-
-              <div v-if="loading" class="message-item assistant">
-                <div class="message-avatar">
-                  <el-avatar :size="36" style="background-color: #409eff">
-                    AI
-                  </el-avatar>
-                </div>
-                <div class="message-bubble">
-                  <div class="message-content typing">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              </div>
-
-              <el-empty
-                v-if="messages.length === 0 && !loading"
-                description="开始新的对话吧"
-                :image-size="120"
-              />
-            </div>
-          </el-scrollbar>
-
-          <div class="input-area">
-            <el-input
-              v-model="inputContent"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入消息内容，按 Enter 发送，Shift + Enter 换行"
-              :disabled="loading"
-              @keydown.enter="handleKeyDown"
-              class="chat-input"
-            />
-            <div class="input-actions">
-              <span class="input-tip">Enter 发送 / Shift + Enter 换行</span>
+      <el-scrollbar class="history-scrollbar">
+        <div class="history-list">
+          <div
+            v-for="item in historyList"
+            :key="item.dialogueId"
+            class="history-card"
+            :class="{ active: currentDialogueId === item.dialogueId }"
+            @click="handleSelectDialogue(item.dialogueId)"
+          >
+            <div class="history-card-top">
+              <span class="history-title">{{ formatHistoryPreview(item.content) }}</span>
               <el-button
-                type="primary"
-                @click="sendMessage"
-                :loading="loading"
-                :disabled="!inputContent.trim()"
+                text
+                circle
+                class="history-delete"
+                @click.stop="handleDeleteDialogue(item.dialogueId)"
               >
-                发送
+                <el-icon><Delete /></el-icon>
               </el-button>
             </div>
+            <p class="history-preview">{{ item.content || '未命名对话' }}</p>
+            <time class="history-time">{{ formatTime(item.createTime) }}</time>
+          </div>
+
+          <el-empty
+            v-if="historyList.length === 0"
+            description="还没有历史会话"
+            :image-size="88"
+          />
+        </div>
+      </el-scrollbar>
+    </aside>
+
+    <section class="chat-panel">
+      <header class="chat-header">
+        <div>
+          <h1>DeepSeek 智能对话</h1>
+        </div>
+        <div class="chat-header-badge">
+          <span class="badge-dot"></span>
+          {{ sending ? '正在生成回复' : '随时开始新话题' }}
+        </div>
+      </header>
+
+      <div ref="messageListRef" class="chat-body">
+        <div v-if="messages.length === 0" class="welcome-card">
+          <div class="welcome-mark">DS</div>
+          <h3>像主流 AI 对话产品一样，边生成边展示</h3>
+          <p>支持 Markdown 渲染、历史会话切换、流式逐字输出，长回答会自动连续追加。</p>
+          <div class="quick-prompts">
+            <button
+              v-for="prompt in quickPrompts"
+              :key="prompt"
+              class="quick-prompt"
+              @click="applyQuickPrompt(prompt)"
+            >
+              {{ prompt }}
+            </button>
           </div>
         </div>
-      </el-main>
-    </el-container>
+
+        <article
+          v-for="item in messages"
+          :key="item.id"
+          class="message-row"
+          :class="item.role"
+        >
+          <div class="message-avatar" :class="item.role">
+            {{ item.role === 'user' ? '我' : 'DS' }}
+          </div>
+
+          <div class="message-card" :class="item.status">
+            <div v-if="item.content" class="message-content markdown-body" v-html="renderMarkdown(item.content)"></div>
+            <div v-else-if="item.status === 'streaming'" class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+
+            <p v-if="item.status === 'error'" class="message-error">
+              {{ item.errorMessage || '本次响应异常，请稍后重试' }}
+            </p>
+          </div>
+        </article>
+      </div>
+
+      <footer class="composer-panel">
+        <div class="composer-shell">
+          <el-input
+            v-model="inputContent"
+            type="textarea"
+            :rows="4"
+            resize="none"
+            placeholder="输入消息，按 Enter 发送，Shift + Enter 换行"
+            :disabled="isBusy"
+            @keydown.enter.exact.prevent="handleSend"
+          />
+          <div class="composer-footer">
+            <span>支持 Markdown 回复、历史会话续聊、流式内容实时渲染</span>
+            <el-button
+              type="primary"
+              class="send-btn"
+              :loading="sending"
+              :disabled="!inputContent.trim()"
+              @click="handleSend"
+            >
+              发送消息
+            </el-button>
+          </div>
+        </div>
+      </footer>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, onUnmounted } from 'vue'
-import { message } from '@/shared/ui/feedback'
-import { confirm } from '@/shared/ui/confirm'
-import {
-  getCompletionHistoryList,
-  getCompletionList,
-  sendCompletion,
-  deleteDialogue,
-  checkAdmin,
-  type DialogueHistory,
-  type Message
-} from '@/api/deepseek'
+import { nextTick, onActivated, onMounted, ref, watch } from 'vue'
+import { Delete, Plus } from '@element-plus/icons-vue'
+
 import { loadMarkdownRenderer, renderPlainMarkdown, type MarkdownRenderer } from '@/shared/utils/markdown'
+import { useDeepseekChat } from '@/modules/blog/composables/useDeepseekChat'
+
+const dialogueLimit = 10
+const quickPrompts = [
+  '帮我总结今天的工作重点',
+  '把这段内容整理成 Markdown 提纲',
+  '给我一版更专业但简洁的回复',
+]
 
 const markdownRenderer = ref<MarkdownRenderer | null>(null)
+const inputContent = ref('')
+const messageListRef = ref<HTMLElement | null>(null)
+
+const {
+  currentDialogueId,
+  dialogueCount,
+  historyList,
+  isAdmin,
+  isBusy,
+  messages,
+  sending,
+  initialize,
+  loadHistory,
+  removeDialogue,
+  sendMessage,
+  startNewChat,
+} = useDeepseekChat()
 
 const renderMarkdown = (content: string) => {
-  return markdownRenderer.value?.render(content) ?? renderPlainMarkdown(content)
+  return markdownRenderer.value?.render(content || '') ?? renderPlainMarkdown(content || '')
 }
 
-const historyList = ref<DialogueHistory[]>([])
-const messages = ref<Message[]>([])
-const inputContent = ref('')
-const loading = ref(false)
-const currentDialogueId = ref<number | null>(null)
-const scrollbarRef = ref()
-const isAdmin = ref(false)
-const dialogueCount = ref(0)
-const MAX_DIALOGUE_COUNT = 10
-
-let longPressTimer: number | null = null
-const LONG_PRESS_DURATION = 800
-
-const startLongPress = (dialogueId: number) => {
-  longPressTimer = window.setTimeout(() => {
-    handleDeleteDialogue(dialogueId)
-  }, LONG_PRESS_DURATION)
-}
-
-const cancelLongPress = () => {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
+const formatHistoryPreview = (content?: string) => {
+  const text = (content || '').trim()
+  if (!text) {
+    return '未命名对话'
   }
+  return text.length > 18 ? `${text.slice(0, 18)}...` : text
 }
 
-const handleDeleteDialogue = async (dialogueId: number) => {
-  if (!(await confirm({ message: '确定删除该对话吗？', confirmText: '删除' }))) return
-  const success = await deleteDialogue(dialogueId)
-  if (success) {
-    await loadHistoryList()
-    if (currentDialogueId.value === dialogueId) {
-      currentDialogueId.value = null
-      messages.value = []
-    }
+const formatTime = (time?: string) => {
+  if (!time) {
+    return ''
   }
-}
-
-const loadHistoryList = async () => {
-  const list = await getCompletionHistoryList()
-  historyList.value = list
-  dialogueCount.value = list.length
-}
-
-const loadHistory = async (dialogueId: number) => {
-  currentDialogueId.value = dialogueId
-  const messageList = await getCompletionList(dialogueId)
-  messages.value = messageList
-  scrollToBottom()
-}
-
-const startNewChat = async () => {
-  if (!isAdmin.value && dialogueCount.value >= MAX_DIALOGUE_COUNT) {
-    message.warning('您的会话额度已满，请删除历史会话后再创建新对话')
-    return
+  const date = new Date(time)
+  if (Number.isNaN(date.getTime())) {
+    return ''
   }
-  currentDialogueId.value = null
-  messages.value = []
-  inputContent.value = ''
-}
-
-const sendMessage = async () => {
-  if (!inputContent.value.trim() || loading.value) return
-
-  if (!currentDialogueId.value && !isAdmin.value && dialogueCount.value >= MAX_DIALOGUE_COUNT) {
-    message.warning('您的会话额度已满，请删除历史会话后再创建新对话')
-    return
-  }
-
-  const content = inputContent.value.trim()
-  messages.value.push({
-    role: 'user',
-    content
-  })
-
-  inputContent.value = ''
-  loading.value = true
-  scrollToBottom()
-
-  try {
-    const response = await sendCompletion(content, currentDialogueId.value)
-
-    if (response) {
-      if (!currentDialogueId.value) {
-        currentDialogueId.value = response.dialogueId
-        await loadHistoryList()
-      }
-
-      messages.value.push({
-        role: 'assistant',
-        content: response.content,
-        dialogueId: response.dialogueId
-      })
-
-      scrollToBottom()
-    }
-  } catch (error) {
-    console.error('发送消息失败:', error)
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    sendMessage()
-  }
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  const hour = `${date.getHours()}`.padStart(2, '0')
+  const minute = `${date.getMinutes()}`.padStart(2, '0')
+  return `${month}-${day} ${hour}:${minute}`
 }
 
 const scrollToBottom = async () => {
   await nextTick()
-  if (scrollbarRef.value) {
-    const scrollElement = scrollbarRef.value.$refs.wrap
-    scrollElement.scrollTop = scrollElement.scrollHeight
+  if (!messageListRef.value) {
+    return
+  }
+  messageListRef.value.scrollTo({
+    top: messageListRef.value.scrollHeight,
+    behavior: 'smooth',
+  })
+}
+
+const handleSend = async () => {
+  const content = inputContent.value
+  if (!content.trim()) {
+    return
+  }
+  inputContent.value = ''
+  const success = await sendMessage(content)
+  if (!success) {
+    inputContent.value = content
   }
 }
 
+const handleNewChat = () => {
+  if (startNewChat()) {
+    inputContent.value = ''
+  }
+}
+
+const handleSelectDialogue = async (dialogueId: number) => {
+  await loadHistory(dialogueId)
+}
+
+const handleDeleteDialogue = async (dialogueId: number) => {
+  await removeDialogue(dialogueId)
+}
+
+const applyQuickPrompt = (prompt: string) => {
+  inputContent.value = prompt
+}
+
+watch(
+  messages,
+  async () => {
+    await scrollToBottom()
+  },
+  { deep: true },
+)
+
 onMounted(async () => {
-  markdownRenderer.value = await loadMarkdownRenderer({ codeHighlight: true })
-  isAdmin.value = await checkAdmin()
-  await loadHistoryList()
+  await initialize()
+  try {
+    markdownRenderer.value = await loadMarkdownRenderer({ codeHighlight: true })
+  } catch (error) {
+    console.error('加载 DeepSeek Markdown 渲染器失败:', error)
+  }
 })
 
-onUnmounted(() => {
-  cancelLongPress()
+onActivated(async () => {
+  await initialize()
 })
 </script>
 
 <style scoped lang="scss">
-.deepseek-container {
+.deepseek-page {
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-strong: #ffffff;
+  --border: rgba(148, 163, 184, 0.24);
+  --text-main: #162033;
+  --text-secondary: #5b667a;
+  --brand: #1d4ed8;
+  --brand-soft: rgba(29, 78, 216, 0.12);
+  --assistant: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+  --user: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  display: grid;
+  grid-template-columns: 310px minmax(0, 1fr);
+  gap: 20px;
   height: 100%;
-  max-height: 100%;
-  padding: 20px;
-  background: #f5f7fa;
+  min-height: 100%;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(30, 64, 175, 0.12), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 28%),
+    linear-gradient(180deg, #eef4ff 0%, #f8fbff 100%);
+  box-sizing: border-box;
+}
+
+.history-panel,
+.chat-panel {
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+.history-panel {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
 
-  .chat-layout {
-    height: 100%;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-  }
+.panel-header,
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 18px;
+}
 
-  .history-aside {
-    border-right: 1px solid #e4e7ed;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+.panel-header h2,
+.chat-header h1 {
+  margin: 0;
+  color: var(--text-main);
+}
 
-    .history-header {
-      padding: 20px;
-      border-bottom: 1px solid #e4e7ed;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
+.new-chat-btn {
+  border-radius: 999px;
+}
 
-      h3 {
-        margin: 0;
-        font-size: 18px;
-        color: #303133;
-      }
-    }
+.history-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 20px 20px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
 
-    .history-scrollbar {
-      flex: 1;
-      height: 0;
-      overflow: hidden;
-    }
+.history-tip strong {
+  color: var(--brand);
+  font-size: 15px;
+}
 
-    .history-list {
-      padding: 10px;
+.history-scrollbar {
+  flex: 1;
+  min-height: 0;
+}
 
-      .history-item {
-        padding: 12px 15px;
-        margin-bottom: 8px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.3s;
-        background: #f5f7fa;
+.history-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
 
-        &:hover {
-          background: #e4e7ed;
-        }
+.history-card {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.75);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
 
-        &.active {
-          background: #409eff;
-          color: white;
-        }
+.history-card:hover,
+.history-card.active {
+  transform: translateY(-1px);
+  border-color: rgba(29, 78, 216, 0.24);
+  box-shadow: 0 16px 28px rgba(59, 130, 246, 0.12);
+}
 
-        .history-content {
-          font-size: 14px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-      }
-    }
-  }
+.history-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-  .chat-main {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
+.history-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
 
-    .chat-content {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
+.history-delete {
+  color: #94a3b8;
+}
 
-      .message-scrollbar {
-        flex: 1;
-        height: 0;
-        padding: 20px;
-        overflow: hidden;
-      }
+.history-preview,
+.history-time {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+}
 
-      .message-list {
-        .message-item {
-          display: flex;
-          margin-bottom: 20px;
-          align-items: flex-start;
+.history-preview {
+  font-size: 13px;
+  line-height: 1.6;
+}
 
-          &.user {
-            flex-direction: row-reverse;
+.history-time {
+  display: block;
+  font-size: 12px;
+}
 
-            .message-bubble {
-              background: #409eff;
-              color: white;
-              margin-right: 12px;
-              margin-left: 0;
-            }
-          }
+.chat-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
 
-          &.assistant {
-            .message-bubble {
-              background: #f4f4f5;
-              color: #303133;
-              margin-left: 12px;
-            }
-          }
+.chat-header {
+  border-bottom: 1px solid var(--border);
+}
 
-          .message-avatar {
-            flex-shrink: 0;
-          }
+.chat-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
 
-          .message-bubble {
-            max-width: 60%;
-            padding: 12px 16px;
-            border-radius: 8px;
-            word-break: break-word;
-            line-height: 1.6;
+.badge-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12);
+}
 
-            .message-content {
-              font-size: 14px;
+.chat-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 32px 20px;
+}
 
-              &.typing {
-                display: flex;
-                gap: 4px;
+.welcome-card {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  max-width: 760px;
+  padding: 32px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 247, 255, 0.9) 100%);
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
 
-                span {
-                  width: 8px;
-                  height: 8px;
-                  background: #909399;
-                  border-radius: 50%;
-                  animation: typing 1.4s infinite;
+.welcome-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
 
-                  &:nth-child(2) {
-                    animation-delay: 0.2s;
-                  }
+.welcome-card h3,
+.welcome-card p {
+  margin: 0;
+  color: var(--text-main);
+}
 
-                  &:nth-child(3) {
-                    animation-delay: 0.4s;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+.welcome-card p {
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
 
-      .input-area {
-        border-top: 1px solid #e4e7ed;
-        padding: 20px;
-        background: #fafafa;
-        flex-shrink: 0;
+.quick-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 
-        .chat-input {
-          margin-bottom: 12px;
-        }
+.quick-prompt {
+  padding: 12px 18px;
+  border: 1px solid rgba(29, 78, 216, 0.16);
+  border-radius: 999px;
+  background: rgba(29, 78, 216, 0.06);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
 
-        .input-actions {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
+.quick-prompt:hover {
+  background: rgba(29, 78, 216, 0.12);
+  transform: translateY(-1px);
+}
 
-          .input-tip {
-            font-size: 12px;
-            color: #909399;
-          }
-        }
-      }
-    }
-  }
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  margin: 0 0 22px;
+}
+
+.message-row.user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+}
+
+.message-avatar.user {
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+}
+
+.message-avatar.assistant {
+  background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+}
+
+.message-card {
+  display: inline-block;
+  flex: 0 1 auto;
+  min-width: 0;
+  inline-size: fit-content;
+  max-inline-size: min(78%, 860px);
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(203, 213, 225, 0.4);
+  background: var(--assistant);
+}
+
+.message-row.user .message-card {
+  background: var(--user);
+  color: #fff;
+}
+
+.message-card.error {
+  border-color: rgba(239, 68, 68, 0.24);
+  background: linear-gradient(135deg, #fff5f5 0%, #fff7f7 100%);
+}
+
+.message-row.user .message-card :deep(p),
+.message-row.user .message-card :deep(li),
+.message-row.user .message-card :deep(code) {
+  color: inherit;
+}
+
+.message-content {
+  line-height: 1.82;
+  color: var(--text-main);
+}
+
+.message-row.user .message-content {
+  color: #fff;
+}
+
+.message-content.markdown-body :deep(> :first-child) {
+  margin-top: 0;
+}
+
+.message-content.markdown-body :deep(> :last-child) {
+  margin-bottom: 0;
+}
+
+.message-content.markdown-body :deep(p) {
+  margin: 0;
+}
+
+.message-content.markdown-body :deep(p + p),
+.message-content.markdown-body :deep(ul + p),
+.message-content.markdown-body :deep(ol + p),
+.message-content.markdown-body :deep(p + ul),
+.message-content.markdown-body :deep(p + ol),
+.message-content.markdown-body :deep(ul + ul),
+.message-content.markdown-body :deep(ol + ol),
+.message-content.markdown-body :deep(pre + p),
+.message-content.markdown-body :deep(p + pre) {
+  margin-top: 0.7em;
+}
+
+.message-content.markdown-body :deep(ul),
+.message-content.markdown-body :deep(ol),
+.message-content.markdown-body :deep(pre),
+.message-content.markdown-body :deep(blockquote) {
+  margin-top: 0.7em;
+  margin-bottom: 0.7em;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(29, 78, 216, 0.48);
+  animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.message-error {
+  margin: 12px 0 0;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.composer-panel {
+  padding: 18px 24px 24px;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.composer-shell {
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--surface-strong);
+  box-shadow: inset 0 0 0 1px rgba(203, 213, 225, 0.36);
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.send-btn {
+  min-width: 120px;
+  border-radius: 999px;
+}
+
+:deep(.el-textarea__inner) {
+  min-height: 108px !important;
+  border: 0;
+  box-shadow: none;
+  font-size: 15px;
+  line-height: 1.8;
+  padding: 0;
+}
+
+:deep(.markdown-body) {
+  background: transparent;
+  color: inherit;
+}
+
+:deep(.markdown-body pre) {
+  border-radius: 16px;
 }
 
 @keyframes typing {
-  0%, 60%, 100% {
-    transform: translateY(0);
+  0%,
+  80%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.35;
   }
-  30% {
-    transform: translateY(-10px);
+  40% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-.markdown-body {
-  line-height: 1.8;
-
-  :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
-    margin-top: 16px;
-    margin-bottom: 8px;
-    font-weight: 600;
-    line-height: 1.4;
+@media (max-width: 1200px) {
+  .deepseek-page {
+    grid-template-columns: 280px minmax(0, 1fr);
+    padding: 18px;
   }
+}
 
-  :deep(h1) { font-size: 1.8em; border-bottom: 1px solid #eaecef; padding-bottom: 8px; }
-  :deep(h2) { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 6px; }
-  :deep(h3) { font-size: 1.25em; }
-  :deep(h4) { font-size: 1.1em; }
-  :deep(h5) { font-size: 1em; }
-  :deep(h6) { font-size: 0.9em; color: #6a737d; }
-
-  :deep(p) {
-    margin-top: 0;
-    margin-bottom: 12px;
-  }
-
-  :deep(ul), :deep(ol) {
-    margin-top: 0;
-    margin-bottom: 12px;
-    padding-left: 2em;
-  }
-
-  :deep(li) {
-    margin-bottom: 4px;
-  }
-
-  :deep(pre) {
-    background: #282c34;
-    border-radius: 6px;
-    padding: 16px;
-    overflow-x: auto;
-    margin: 12px 0;
-
-    code {
-      background: transparent;
-      padding: 0;
-      font-size: 13px;
-      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    }
-  }
-
-  :deep(code) {
-    background: #f6f8fa;
-    border-radius: 3px;
-    padding: 2px 6px;
-    font-size: 0.9em;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    color: #e83e8c;
-  }
-
-  :deep(blockquote) {
-    border-left: 4px solid #dfe2e5;
-    padding: 0 16px;
-    margin: 12px 0;
-    color: #6a737d;
-  }
-
-  :deep(table) {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 12px 0;
-
-    th, td {
-      border: 1px solid #dfe2e5;
-      padding: 8px 13px;
-    }
-
-    th {
-      background: #f6f8fa;
-      font-weight: 600;
-    }
-
-    tr:nth-child(even) {
-      background: #f6f8fa;
-    }
-  }
-
-  :deep(a) {
-    color: #0366d6;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  :deep(hr) {
-    border: none;
-    border-top: 2px solid #eaecef;
-    margin: 24px 0;
-  }
-
-  :deep(img) {
-    max-width: 100%;
+@media (max-width: 900px) {
+  .deepseek-page {
+    grid-template-columns: 1fr;
     height: auto;
-    border-radius: 4px;
-    margin: 8px 0;
+    min-height: 100%;
   }
 
-  :deep(strong) {
-    font-weight: 600;
+  .history-panel {
+    max-height: 320px;
   }
 
-  :deep(em) {
-    font-style: italic;
+  .chat-body {
+    padding: 22px 18px 18px;
   }
-}
 
-.message-item.user {
-  .markdown-body {
-    :deep(code) {
-      background: rgba(255, 255, 255, 0.3);
-      color: rgba(255, 255, 255, 0.9);
-    }
+  .message-card {
+    max-inline-size: min(88%, 100%);
+  }
 
-    :deep(pre) {
-      background: rgba(0, 0, 0, 0.3);
-    }
+  .composer-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .send-btn {
+    width: 100%;
   }
 }
 </style>

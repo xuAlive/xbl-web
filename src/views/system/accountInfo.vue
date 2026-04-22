@@ -136,14 +136,84 @@
         </el-row>
       </el-form>
 
+      <template v-if="userInfo">
+        <section class="password-section">
+          <button type="button" class="password-toggle" @click="togglePasswordExpanded">
+            <span>修改密码</span>
+            <el-icon class="password-toggle-icon" :class="{ expanded: passwordExpanded }"><ArrowDown /></el-icon>
+          </button>
+
+          <el-collapse-transition>
+            <div v-show="passwordExpanded" class="password-panel">
+              <el-form
+                ref="passwordFormRef"
+                :model="passwordForm"
+                :rules="passwordRules"
+                label-width="100px"
+                status-icon
+                class="password-form"
+              >
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="原密码" prop="oldPassword">
+                      <el-input
+                        v-model="passwordForm.oldPassword"
+                        type="password"
+                        show-password
+                        placeholder="请输入原密码"
+                        autocomplete="current-password"
+                      />
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="新密码" prop="newPassword">
+                      <el-input
+                        v-model="passwordForm.newPassword"
+                        type="password"
+                        show-password
+                        placeholder="请输入新密码"
+                        autocomplete="new-password"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="确认密码" prop="confirmPassword">
+                      <el-input
+                        v-model="passwordForm.confirmPassword"
+                        type="password"
+                        show-password
+                        placeholder="请再次输入新密码"
+                        autocomplete="new-password"
+                      />
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <div class="password-actions">
+                  <el-button @click="resetPasswordForm">重置</el-button>
+                  <el-button type="primary" :loading="passwordLoading" @click="submitPasswordChange">
+                    修改密码
+                  </el-button>
+                </div>
+              </el-form>
+            </div>
+          </el-collapse-transition>
+        </section>
+      </template>
+
       <el-empty v-else description="加载用户信息失败" />
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { getUserInfoByAccount, updateUserInfo, verifyPhone, type UserInfo } from '../../api/user'
+import { computed, onMounted, reactive, ref } from 'vue'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { changePassword, getUserInfoByAccount, updateUserInfo, verifyPhone, type UserInfo } from '../../api/user'
 import { getUserRoleCode as fetchUserRoleCode } from '../../api/role'
 import { getUserPermissions as fetchUserPermissions } from '../../api/permission'
 import { getUserRoleCode, setUserRoleCode, setUserPermissions, setUserMenus } from '../../utils/userInfo'
@@ -167,6 +237,14 @@ const isEditing = ref(false)
 const roleCode = ref(getUserRoleCode())
 const verifyPhoneNumber = ref('')
 const verifyLoading = ref(false)
+const passwordFormRef = ref<FormInstance>()
+const passwordLoading = ref(false)
+const passwordExpanded = ref(false)
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 
 // 角色显示名称
 const roleLabel = computed(() => {
@@ -186,6 +264,24 @@ const roleTagType = computed(() => {
 
 // 是否游客
 const isGuest = computed(() => roleCode.value === 'GUEST')
+
+const validateConfirmPassword = (_rule: any, value: string, callback: (error?: Error) => void) => {
+  if (!value) {
+    callback(new Error('请输入确认密码'))
+    return
+  }
+  if (value !== passwordForm.newPassword) {
+    callback(new Error('两次输入的新密码不一致'))
+    return
+  }
+  callback()
+}
+
+const passwordRules = reactive<FormRules<typeof passwordForm>>({
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }],
+  confirmPassword: [{ validator: validateConfirmPassword, trigger: 'blur' }]
+})
 
 // 验证手机号
 const handleVerifyPhone = async () => {
@@ -269,6 +365,51 @@ const saveUserInfo = async () => {
   }
 }
 
+const resetPasswordForm = () => {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordFormRef.value?.clearValidate()
+}
+
+const togglePasswordExpanded = () => {
+  passwordExpanded.value = !passwordExpanded.value
+  if (!passwordExpanded.value) {
+    resetPasswordForm()
+  }
+}
+
+const submitPasswordChange = async () => {
+  if (!passwordFormRef.value) {
+    return
+  }
+
+  passwordFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      return
+    }
+    if (passwordForm.oldPassword === passwordForm.newPassword) {
+      message.warning('新密码不能与原密码相同')
+      return
+    }
+
+    passwordLoading.value = true
+    try {
+      const success = await changePassword({
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword
+      })
+      if (success) {
+        await loadUserInfo()
+        resetPasswordForm()
+      }
+    } finally {
+      passwordLoading.value = false
+    }
+  })
+}
+
 onMounted(() => {
   loadUserInfo()
 })
@@ -290,4 +431,38 @@ onMounted(() => {
     color: #2c5282
     margin: 0
     font-family: var(--font-family-base)
+
+  .password-form
+    margin-top: 0
+
+  .password-section
+    margin-top: 8px
+    border-top: 1px solid #ebeef5
+    padding-top: 16px
+
+  .password-panel
+    padding-top: 14px
+
+  .password-toggle
+    width: 100%
+    display: flex
+    align-items: center
+    justify-content: space-between
+    background: transparent
+    border: 0
+    padding: 0
+    font-size: 16px
+    font-weight: 600
+    color: #303133
+    cursor: pointer
+
+  .password-toggle-icon
+    transition: transform .2s ease
+
+    &.expanded
+      transform: rotate(180deg)
+
+  .password-actions
+    display: flex
+    justify-content: flex-end
 </style>

@@ -1,10 +1,13 @@
 <template>
-  <div class="schedule-container">
+  <div class="schedule-container xbl-app-page xbl-app-page--schedule">
     <!-- 顶部导航 -->
     <el-card class="header-card">
       <div class="header-content">
         <div class="header-left">
-          <el-button @click="goBack" icon="ArrowLeft" text>返回</el-button>
+          <el-button @click="goBack" text>
+            <el-icon><ArrowLeft /></el-icon>
+            返回
+          </el-button>
           <h2 class="page-title">
             <el-icon><Calendar /></el-icon>
             排班管理系统
@@ -25,12 +28,16 @@
       <!-- 日期选择 -->
       <el-card class="date-card">
         <div class="date-selector">
-          <el-button @click="prevWeek" icon="ArrowLeft" circle />
+          <el-button class="nav-arrow-button" @click="prevWeek" circle>
+            <el-icon><ArrowLeftBold /></el-icon>
+          </el-button>
           <div class="week-display">
             <span class="week-range">{{ weekRangeText }}</span>
             <el-button type="primary" link @click="goToday">今天</el-button>
           </div>
-          <el-button @click="nextWeek" icon="ArrowRight" circle />
+          <el-button class="nav-arrow-button" @click="nextWeek" circle>
+            <el-icon><ArrowRightBold /></el-icon>
+          </el-button>
           <el-button type="success" @click="handleMonthlyExport" icon="Download" style="margin-left: 20px;">导出月排班</el-button>
           <el-button v-if="isAdmin" type="primary" @click="showCreateDialog" icon="Plus">添加排班</el-button>
         </div>
@@ -353,7 +360,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { Calendar, Plus, ArrowLeft, ArrowRight, Download } from '@element-plus/icons-vue'
+import { Calendar, Plus, ArrowLeft, ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
 import { message } from '@/shared/ui/feedback'
 import { confirm } from '@/shared/ui/confirm'
 import { loadEcharts, type EChartsModule } from '../../shared/utils/echarts'
@@ -1008,6 +1015,17 @@ onBeforeUnmount(() => {
     justify-content: center;
     align-items: center;
     gap: 20px;
+
+    .nav-arrow-button {
+      border-color: #d1d5db;
+      background: #fff;
+      color: #111827;
+    }
+
+    .nav-arrow-button .el-icon {
+      color: #111827;
+      font-size: 14px;
+    }
 
     .week-display {
       text-align: center;

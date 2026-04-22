@@ -1,12 +1,13 @@
 import { $get } from '@/utils/request'
-import { getToken } from '@/shared/auth/session'
-import { resolveServiceBaseURL } from '@/shared/config/runtime'
+import { consumeSseResponse, createSsePostRequest } from '@/shared/http/sse'
 
 export interface BaziFortuneRequest {
+  name?: string
   birthYear: number
   birthMonth: number
   birthDay: number
   birthTime: string
+  calendarType?: 'lunar' | 'solar'
   leapMonth?: boolean
   gender: '男' | '女'
   question?: string
@@ -14,6 +15,7 @@ export interface BaziFortuneRequest {
 
 export interface BaziFortuneMeta {
   recordId: number
+  calendarType?: 'lunar' | 'solar'
   yearPillar: string
   monthPillar: string
   dayPillar: string
@@ -52,10 +54,81 @@ export interface BaziFortuneDetail extends BaziFortuneHistoryItem {
   errorMessage?: string | null
 }
 
+export interface BaziMarriagePersonRequest {
+  name?: string
+  birthYear: number
+  birthMonth: number
+  birthDay: number
+  birthTime: string
+  calendarType?: 'lunar' | 'solar'
+  leapMonth?: boolean
+  gender: '男' | '女'
+}
+
+export interface BaziMarriageRequest {
+  personA: BaziMarriagePersonRequest
+  personB: BaziMarriagePersonRequest
+  question?: string
+}
+
+export interface BaziMarriagePersonMeta {
+  name?: string
+  gender: '男' | '女'
+  birthDate: string
+  birthTime: string
+  calendarType?: 'lunar' | 'solar'
+  leapMonth?: boolean
+  solarDate?: string | null
+  lunarText?: string | null
+  zodiac: string
+  baZi: string
+  yearPillar: string
+  monthPillar: string
+  dayPillar: string
+  hourPillar?: string | null
+  shiChen?: string | null
+  solarTerm?: string | null
+}
+
+export interface BaziMarriageMeta {
+  recordId?: number
+  personA: BaziMarriagePersonMeta
+  personB: BaziMarriagePersonMeta
+}
+
+export interface BaziMarriageHistoryItem {
+  id: number
+  personAName?: string
+  personBName?: string
+  personABaZi?: string
+  personBBaZi?: string
+  question?: string
+  status: string
+  createTime: string
+}
+
+export interface BaziMarriageDetail {
+  id: number
+  personA: BaziMarriagePersonMeta
+  personB: BaziMarriagePersonMeta
+  question?: string
+  fortuneContent: string
+  status: string
+  errorMessage?: string | null
+  createTime: string
+}
+
 interface StreamHandlers {
   onMeta?: (meta: BaziFortuneMeta) => void
   onDelta?: (content: string) => void
   onDone?: (recordId: number) => void
+  onError?: (message: string) => void
+}
+
+interface MarriageStreamHandlers {
+  onMeta?: (meta: BaziMarriageMeta) => void
+  onDelta?: (content: string) => void
+  onDone?: (recordId: number | null, content: string) => void
   onError?: (message: string) => void
 }
 
@@ -69,67 +142,20 @@ export const getBaziFortuneDetail = async (id: number) => {
   return ret.code === 1 ? (ret.data as BaziFortuneDetail) : null
 }
 
-export const streamBaziFortune = async (payload: BaziFortuneRequest, handlers: StreamHandlers = {}) => {
-  const token = getToken()
-  const response = await fetch(`${resolveServiceBaseURL()}/bazi/fortune/stream`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'text/event-stream',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(extractErrorMessage(text) || `请求失败: ${response.status}`)
-  }
-
-  if (!response.body) {
-    throw new Error('浏览器不支持流式响应')
-  }
-
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-
-  while (true) {
-    const { value, done } = await reader.read()
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
-    const parsed = consumeSseBuffer(buffer, handlers)
-    buffer = parsed.rest
-    if (done) {
-      break
-    }
-  }
-
-  if (buffer.trim()) {
-    consumeSseBuffer(`${buffer}\n\n`, handlers)
-  }
+export const getBaziMarriageHistory = async () => {
+  const ret = await $get('/bazi/marriage/history', {})
+  return ret.code === 1 ? (ret.data as BaziMarriageHistoryItem[]) : []
 }
 
-function consumeSseBuffer(buffer: string, handlers: StreamHandlers) {
-  const chunks = buffer.replace(/\r\n/g, '\n').split('\n\n')
-  const rest = chunks.pop() || ''
+export const getBaziMarriageDetail = async (id: number) => {
+  const ret = await $get(`/bazi/marriage/detail/${id}`, {})
+  return ret.code === 1 ? (ret.data as BaziMarriageDetail) : null
+}
 
-  for (const chunk of chunks) {
-    let event = 'message'
-    const dataLines: string[] = []
-    for (const line of chunk.split('\n')) {
-      if (line.startsWith('event:')) {
-        event = line.slice(6).trim()
-      } else if (line.startsWith('data:')) {
-        dataLines.push(line.slice(5).trim())
-      }
-    }
-
-    const payloadText = dataLines.join('\n')
-    if (!payloadText) {
-      continue
-    }
-
-    const payload = JSON.parse(payloadText)
+export const streamBaziFortune = async (payload: BaziFortuneRequest, handlers: StreamHandlers = {}) => {
+  const response = await createSsePostRequest('/bazi/fortune/stream', payload)
+  await consumeSseResponse(response, ({ event, data }) => {
+    const payload = JSON.parse(data)
     if (event === 'meta') {
       handlers.onMeta?.(payload as BaziFortuneMeta)
     } else if (event === 'delta') {
@@ -139,16 +165,21 @@ function consumeSseBuffer(buffer: string, handlers: StreamHandlers) {
     } else if (event === 'error') {
       handlers.onError?.((payload as { message: string }).message || '生成失败')
     }
-  }
-
-  return { rest }
+  })
 }
 
-function extractErrorMessage(text: string) {
-  try {
-    const payload = JSON.parse(text)
-    return payload.codeMessage || payload.message || ''
-  } catch {
-    return text
-  }
+export const streamBaziMarriage = async (payload: BaziMarriageRequest, handlers: MarriageStreamHandlers = {}) => {
+  const response = await createSsePostRequest('/bazi/marriage/stream', payload)
+  await consumeSseResponse(response, ({ event, data }) => {
+    const payload = JSON.parse(data)
+    if (event === 'meta') {
+      handlers.onMeta?.(payload as BaziMarriageMeta)
+    } else if (event === 'delta') {
+      handlers.onDelta?.((payload as { content: string }).content || '')
+    } else if (event === 'done') {
+      handlers.onDone?.((payload as { recordId?: number | null }).recordId ?? null, (payload as { content: string }).content || '')
+    } else if (event === 'error') {
+      handlers.onError?.((payload as { message: string }).message || '生成失败')
+    }
+  })
 }

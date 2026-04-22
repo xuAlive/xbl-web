@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <div class="home-header">
-      <div class="user-info">
+      <button class="user-info" type="button" @click="openAccountInfo">
         <el-avatar :size="50" class="avatar">
           {{ displayName.charAt(0) }}
         </el-avatar>
@@ -12,7 +12,7 @@
           </div>
           <div class="user-desc">欢迎使用小徐的应用</div>
         </div>
-      </div>
+      </button>
     </div>
 
     <div v-if="isGuest" class="verify-section">
@@ -78,6 +78,10 @@
           <el-icon :size="24"><ChatDotRound /></el-icon>
           <span>AI对话</span>
         </div>
+        <div class="quick-item" @click="navigateTo('/bazi-fortune')">
+          <el-icon :size="24"><Compass /></el-icon>
+          <span>八字运势</span>
+        </div>
         <div class="quick-item" @click="handleLogout">
           <el-icon :size="24"><SwitchButton /></el-icon>
           <span>退出</span>
@@ -88,10 +92,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { EditPen, Notebook, ChatDotRound, SwitchButton, Reading, ChatLineSquare, Calendar, Document, WarningFilled, Stopwatch } from '@element-plus/icons-vue'
-import { getUserInfo, clearAuth, handleWechatCallback, getUserRoleCode, setUserRoleCode, setUserPermissions, setUserMenus } from '@/mobile/utils/auth'
+import { EditPen, Notebook, ChatDotRound, SwitchButton, Reading, ChatLineSquare, Calendar, Document, WarningFilled, Stopwatch, Compass } from '@element-plus/icons-vue'
+import { addAuthChangeListener, getUserInfo, clearAuth, handleWechatCallback, getUserRoleCode, setUserRoleCode, setUserPermissions, setUserMenus } from '@/mobile/utils/auth'
 import { confirm } from '@/shared/ui/confirm'
 import { message } from '@/shared/ui/feedback'
 import { getUserRoleCode as fetchUserRoleCode } from '@/modules/mobile/system/api/role'
@@ -105,6 +109,7 @@ const displayName = ref('用户')
 const roleCode = ref(getUserRoleCode())
 const verifyPhoneNumber = ref('')
 const verifyLoading = ref(false)
+let removeAuthListener: (() => void) | null = null
 
 const roleLabel = computed(() => {
   const map: Record<string, string> = { ADMIN: '管理员', USER: '正式用户', GUEST: '游客' }
@@ -152,6 +157,7 @@ const handleVerifyPhone = async () => {
 const apps = ref([
   { name: '个人博客', desc: '记录生活，分享想法', icon: Reading, color: '#409EFF', path: '/blog' },
   { name: 'AI对话', desc: 'DeepSeek智能助手', icon: ChatLineSquare, color: '#67C23A', path: '/deepseek' },
+  { name: '八字运势', desc: '命盘测算、姻缘合盘、流式解读', icon: Compass, color: '#F59E0B', path: '/bazi-fortune' },
   { name: '排班管理', desc: '轻松管理工作排班', icon: Calendar, color: '#E6A23C', path: '/schedule' },
   { name: '日记本', desc: '记录每一天的心情', icon: Document, color: '#F56C6C', path: '/diary' },
   { name: '工时记录', desc: '项目记工、签到补签、结算管理', icon: Stopwatch, color: '#14B8A6', path: '/timesheet' }
@@ -161,6 +167,10 @@ const navigateTo = (path: string) => {
   router.push(path)
 }
 
+const openAccountInfo = () => {
+  router.push('/account-info')
+}
+
 const handleLogout = () => {
   confirm({
     message: '确定要退出登录吗？',
@@ -168,17 +178,34 @@ const handleLogout = () => {
   }).then((confirmed) => {
     if (!confirmed) return
     clearAuth()
-    router.push('/login')
+    router.replace('/login')
   })
+}
+
+const refreshProfile = () => {
+  const userInfo = getUserInfo()
+  if (userInfo) {
+    displayName.value = userInfo.name || userInfo.userName || userInfo.account || '用户'
+  } else {
+    displayName.value = '用户'
+  }
+  roleCode.value = getUserRoleCode()
 }
 
 onMounted(() => {
   handleWechatCallback()
+  refreshProfile()
+  removeAuthListener = addAuthChangeListener(() => {
+    refreshProfile()
+  })
+})
 
-  const userInfo = getUserInfo()
-  if (userInfo) {
-    displayName.value = userInfo.userName || userInfo.account || '用户'
-  }
+onActivated(() => {
+  refreshProfile()
+})
+
+onBeforeUnmount(() => {
+  removeAuthListener?.()
 })
 </script>
 
@@ -193,9 +220,14 @@ onMounted(() => {
   padding: 40px 20px 30px;
 
   .user-info {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
     display: flex;
     align-items: center;
     gap: 15px;
+    padding: 0;
 
     .avatar {
       background: rgba(255, 255, 255, 0.9);

@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { isLoggedIn } from '../utils/auth'
+import { getUrlParam, isLoggedIn } from '../utils/auth'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -57,6 +57,12 @@ const router = createRouter({
       name: 'DeepSeek',
       meta: { title: 'AI对话', requiresAuth: true, platform: 'mobile' },
       component: () => import('@/modules/mobile/blog/views/DeepseekPage.vue')
+    },
+    {
+      path: '/bazi-fortune',
+      name: 'BaziFortune',
+      meta: { title: '八字运势', requiresAuth: true, platform: 'mobile' },
+      component: () => import('@/modules/mobile/blog/views/BaziFortunePage.vue')
     },
     {
       path: '/schedule',
@@ -143,12 +149,31 @@ const router = createRouter({
       name: 'Register',
       meta: { title: '注册', publicRoute: true, platform: 'mobile' },
       component: () => import('@/modules/mobile/system/views/RegisterPage.vue')
+    },
+    {
+      path: '/account-info',
+      name: 'AccountInfo',
+      meta: { title: '个人信息', requiresAuth: true, platform: 'mobile' },
+      component: () => import('@/modules/mobile/system/views/AccountInfoPage.vue')
     }
   ]
 })
 
 router.beforeEach((to, _from, next) => {
   document.title = (to.meta.title as string) || '小徐的应用'
+
+  const authCode = getUrlParam('authCode')
+  if (authCode && !isLoggedIn() && to.path !== '/login') {
+    const redirectPath = to.fullPath.replace(/([?&])authCode=[^&]*(&?)/, (_match, prefix: string, suffix: string) => {
+      if (prefix === '?' && suffix) {
+        return '?'
+      }
+      return ''
+    }).replace(/\?$/, '')
+    sessionStorage.setItem('redirect_path', redirectPath || '/')
+    next({ path: '/login', query: { authCode } })
+    return
+  }
 
   if (to.meta.requiresAuth && !isLoggedIn()) {
     sessionStorage.setItem('redirect_path', to.fullPath)

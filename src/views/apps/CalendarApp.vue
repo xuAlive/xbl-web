@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-container">
+  <div class="calendar-container xbl-app-page xbl-app-page--calendar">
     <transition name="slide-down">
       <div v-if="currentNotification" class="notification-bar">
         <div class="notification-content">
@@ -69,8 +69,12 @@
                   <span class="month-title">{{ currentYear }}年 {{ currentMonth }}月</span>
                 </div>
                 <div class="month-actions">
-                  <el-button @click="prevMonth" icon="ArrowLeft" circle size="small" />
-                  <el-button @click="nextMonth" icon="ArrowRight" circle size="small" />
+                  <el-button class="nav-arrow-button" @click="prevMonth" circle size="small">
+                    <el-icon><ArrowLeftBold /></el-icon>
+                  </el-button>
+                  <el-button class="nav-arrow-button" @click="nextMonth" circle size="small">
+                    <el-icon><ArrowRightBold /></el-icon>
+                  </el-button>
                   <el-button type="primary" plain @click="goToday">回到今天</el-button>
                 </div>
               </div>
@@ -309,7 +313,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Notebook, Bell, ArrowLeft, ArrowRight
+  Notebook, Bell, ArrowLeft, ArrowLeftBold, ArrowRightBold
 } from '@element-plus/icons-vue'
 import { message } from '@/shared/ui/feedback'
 import { confirm } from '@/shared/ui/confirm'
@@ -1184,6 +1188,16 @@ onUnmounted(() => {
     gap: 10px;
   }
 
+  .nav-arrow-button {
+    border-color: #d1d5db;
+    background: #fff;
+  }
+
+  .nav-arrow-button .el-icon {
+    color: #111827;
+    font-size: 14px;
+  }
+
   .calendar-grid {
     min-height: 0;
     display: grid;
@@ -1418,13 +1432,13 @@ onUnmounted(() => {
   word-break: break-word;
 }
 
-@media (max-width: 1440px) {
+@media (max-width: 1180px) {
   .calendar-stage-inner {
     grid-template-columns: minmax(0, 1fr) 260px;
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .calendar-container {
     height: auto;
     overflow: visible;

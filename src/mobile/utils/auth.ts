@@ -1,6 +1,8 @@
 export {
+  addAuthChangeListener,
   clearAuth,
   getAccount,
+  getUrlParam,
   getToken,
   getTokenFromUrl,
   getUserInfo,
@@ -10,6 +12,7 @@ export {
   handleWechatCallback,
   hasPermission,
   isLoggedIn,
+  removeUrlParam,
   setToken,
   setUserInfo,
   setUserMenus,

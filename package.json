@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && chmod -R a+rX dist",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit"
   },

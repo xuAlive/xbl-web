@@ -11,6 +11,7 @@ const USER_INFO_KEY = 'user_info'
 const USER_MENUS_KEY = 'user_menus'
 const USER_ROLE_CODE_KEY = 'user_role_code'
 const USER_PERMISSIONS_KEY = 'user_permissions'
+export const AUTH_CHANGED_EVENT = 'xbl-auth-changed'
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
@@ -30,8 +31,26 @@ function writeJSON<T>(key: string, value: T) {
   }
 }
 
+function dispatchAuthChanged() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.dispatchEvent(new CustomEvent(AUTH_CHANGED_EVENT))
+}
+
+function getHashUrlParams() {
+  const hash = window.location.hash || ''
+  const queryIndex = hash.indexOf('?')
+  if (queryIndex < 0) {
+    return new URLSearchParams()
+  }
+  return new URLSearchParams(hash.slice(queryIndex + 1))
+}
+
 export const setToken = (token: string) => {
   sessionStorage.setItem(TOKEN_KEY, token)
+  dispatchAuthChanged()
 }
 
 export const getToken = () => sessionStorage.getItem(TOKEN_KEY) || ''
@@ -41,7 +60,10 @@ export const setUserInfo = (userInfo: SessionUserInfo) => {
 
   if (userInfo.token) {
     setToken(userInfo.token)
+    return
   }
+
+  dispatchAuthChanged()
 }
 
 export const getUserInfo = () => readJSON<SessionUserInfo | null>(USER_INFO_KEY, null)
@@ -59,23 +81,31 @@ export const clearUserInfo = () => {
   sessionStorage.removeItem(USER_MENUS_KEY)
   sessionStorage.removeItem(USER_ROLE_CODE_KEY)
   sessionStorage.removeItem(USER_PERMISSIONS_KEY)
+  dispatchAuthChanged()
 }
 
 export const clearAuth = clearUserInfo
 
 export const isLoggedIn = () => Boolean(getToken())
 
-export const setUserMenus = (menus: any[]) => writeJSON(USER_MENUS_KEY, menus)
+export const setUserMenus = (menus: any[]) => {
+  writeJSON(USER_MENUS_KEY, menus)
+  dispatchAuthChanged()
+}
 
 export const getUserMenus = () => readJSON<any[]>(USER_MENUS_KEY, [])
 
 export const setUserRoleCode = (roleCode: string) => {
   sessionStorage.setItem(USER_ROLE_CODE_KEY, roleCode)
+  dispatchAuthChanged()
 }
 
 export const getUserRoleCode = () => sessionStorage.getItem(USER_ROLE_CODE_KEY) || ''
 
-export const setUserPermissions = (permissions: string[]) => writeJSON(USER_PERMISSIONS_KEY, permissions)
+export const setUserPermissions = (permissions: string[]) => {
+  writeJSON(USER_PERMISSIONS_KEY, permissions)
+  dispatchAuthChanged()
+}
 
 export const getUserPermissions = () => readJSON<string[]>(USER_PERMISSIONS_KEY, [])
 
@@ -90,8 +120,48 @@ export const hasPermission = (permissionCode: string) => {
 }
 
 export const getTokenFromUrl = () => {
-  const urlParams = new URLSearchParams(window.location.search)
-  return urlParams.get('token')
+  return getUrlParam('token')
+}
+
+export const getUrlParam = (name: string) => {
+  const searchParams = new URLSearchParams(window.location.search)
+  const searchValue = searchParams.get(name)
+  if (searchValue) {
+    return searchValue
+  }
+
+  const hashParams = getHashUrlParams()
+  return hashParams.get(name)
+}
+
+export const removeUrlParam = (name: string) => {
+  const url = new URL(window.location.href)
+  url.searchParams.delete(name)
+
+  const hash = url.hash || ''
+  const queryIndex = hash.indexOf('?')
+  if (queryIndex >= 0) {
+    const hashPath = hash.slice(0, queryIndex)
+    const hashParams = new URLSearchParams(hash.slice(queryIndex + 1))
+    hashParams.delete(name)
+    const hashQuery = hashParams.toString()
+    url.hash = hashQuery ? `${hashPath}?${hashQuery}` : hashPath
+  }
+
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+export const addAuthChangeListener = (listener: () => void) => {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  const handler = () => {
+    listener()
+  }
+
+  window.addEventListener(AUTH_CHANGED_EVENT, handler)
+  return () => window.removeEventListener(AUTH_CHANGED_EVENT, handler)
 }
 
 export const handleWechatCallback = () => {
@@ -113,8 +183,6 @@ export const handleWechatCallback = () => {
     console.error('解析 token 失败:', error)
   }
 
-  const url = new URL(window.location.href)
-  url.searchParams.delete('token')
-  window.history.replaceState({}, '', url.pathname + url.search)
+  removeUrlParam('token')
   return true
 }

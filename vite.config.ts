@@ -85,21 +85,34 @@ export default defineConfig(({ mode }) => {
       host: env.VITE_DEV_HOST || '127.0.0.1',
       port: Number(env.VITE_DEV_PORT || 5173),
       proxy: {
+        '/xbl': {
+          target: env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:6101',
+          changeOrigin: true,
+        },
         '/blog': {
           target: env.VITE_BLOG_PROXY_TARGET || 'http://127.0.0.1:6101',
           changeOrigin: true,
+          rewrite: (path) => `/xbl${path}`,
         },
         '/schedule': {
           target: env.VITE_SCHEDULE_PROXY_TARGET || 'http://127.0.0.1:6101',
           changeOrigin: true,
+          rewrite: (path) => `/xbl${path}`,
+        },
+        '/crawler': {
+          target: env.VITE_CRAWLER_PROXY_TARGET || 'http://127.0.0.1:6101',
+          changeOrigin: true,
+          rewrite: (path) => `/xbl${path}`,
         },
         '/calendar': {
           target: env.VITE_CALENDAR_PROXY_TARGET || 'http://127.0.0.1:6101',
           changeOrigin: true,
+          rewrite: (path) => `/xbl${path}`,
         },
         '/timesheet': {
           target: env.VITE_TIMESHEET_PROXY_TARGET || 'http://127.0.0.1:6101',
           changeOrigin: true,
+          rewrite: (path) => `/xbl${path}`,
         },
       },
     },

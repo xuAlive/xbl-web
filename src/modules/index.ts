@@ -1,4 +1,5 @@
 export * as blogModules from '@/modules/blog/api'
+export * as crawlerModules from '@/modules/crawler/api'
 export * as systemModules from '@/modules/system/api'
 export * as calendarModules from '@/modules/calendar/api'
 export * as scheduleModules from '@/modules/schedule/api'

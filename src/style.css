@@ -1,3 +1,5 @@
+@import 'highlight.js/styles/github-dark.css';
+
 *{
   margin: 0px;
   padding: 0px;
@@ -32,6 +34,277 @@ input,
 textarea,
 select {
   font-family: var(--font-family-base);
+}
+
+.xbl-app-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  padding: clamp(12px, 1.5vw, 20px);
+  overflow-x: hidden;
+}
+
+.xbl-app-page :where(
+  .hero-card,
+  .header-card,
+  .date-card,
+  .legend-card,
+  .schedule-card,
+  .employee-card,
+  .statistics-card,
+  .sidebar-card,
+  .summary-card,
+  .members-card,
+  .settlement-list-card,
+  .record-card,
+  .settlement-card,
+  .calendar-panel,
+  .task-list-card,
+  .preview-card,
+  .config-card,
+  .detail-card,
+  .knowledge-card,
+  .import-card,
+  .source-card
+) {
+  min-width: 0;
+}
+
+.xbl-app-page :where(
+  .workspace,
+  .workspace-shell,
+  .main-panel,
+  .left-panel,
+  .middle-panel,
+  .right-panel,
+  .grid-two,
+  .calendar-stage-inner,
+  .hero-metrics,
+  .summary-grid,
+  .summary-row,
+  .filters,
+  .form-grid,
+  .form-grid--numbers,
+  .project-info-grid
+) {
+  min-width: 0;
+}
+
+.xbl-app-page :where(
+  .hero-head,
+  .hero-top,
+  .header-content,
+  .header-main,
+  .header-actions,
+  .hero-actions,
+  .summary-top,
+  .summary-actions,
+  .date-selector,
+  .employee-toolbar,
+  .statistics-toolbar,
+  .record-header,
+  .detail-head,
+  .card-header,
+  .header-right,
+  .filter-actions,
+  .upload-actions
+) {
+  flex-wrap: wrap;
+}
+
+.xbl-app-page :where(
+  .page-title,
+  .hero-title,
+  .source-name,
+  .task-name,
+  .project-name,
+  .knowledge-item-title,
+  .latest-item-title,
+  .summary-path,
+  .metric-path,
+  .upload-file-name,
+  .timeline-desc,
+  .knowledge-item-summary,
+  .latest-item-summary,
+  .detail-item-content
+) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.xbl-app-page :where(
+  .el-input,
+  .el-select,
+  .el-input-number,
+  .el-date-editor,
+  .el-radio-group,
+  .el-pagination
+) {
+  max-width: 100%;
+}
+
+@media (max-width: 1440px) {
+  .xbl-app-page {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .xbl-app-page--calendar,
+  .xbl-app-page--calendar .workspace-shell,
+  .xbl-app-page--calendar .calendar-stage,
+  .xbl-app-page--calendar .calendar-panel,
+  .xbl-app-page--calendar .calendar-panel .el-card__body,
+  .xbl-app-page--calendar .calendar-stage-inner,
+  .xbl-app-page--timesheet,
+  .xbl-app-page--timesheet .workspace,
+  .xbl-app-page--timesheet .main-panel,
+  .xbl-app-page--timesheet .grid-two {
+    height: auto !important;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .xbl-app-page--medical .knowledge-list,
+  .xbl-app-page--medical .source-list,
+  .xbl-app-page--timesheet .members-card,
+  .xbl-app-page--timesheet .settlement-list-card,
+  .xbl-app-page--timesheet .record-card,
+  .xbl-app-page--timesheet .settlement-card,
+  .xbl-app-page--timesheet .record-table-section {
+    height: auto !important;
+    min-height: 0;
+    max-height: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .xbl-app-page {
+    padding: 12px;
+  }
+
+  .xbl-app-page :where(
+    .hero-head,
+    .hero-top,
+    .header-content,
+    .header-main,
+    .header-actions,
+    .hero-actions,
+    .summary-top,
+    .summary-actions,
+    .date-selector,
+    .employee-toolbar,
+    .statistics-toolbar,
+    .record-header,
+    .detail-head,
+    .header-right,
+    .filter-actions,
+    .upload-actions
+  ) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .xbl-app-page :where(
+    .workspace,
+    .grid-two,
+    .calendar-stage-inner,
+    .hero-metrics,
+    .summary-grid,
+    .summary-row,
+    .filters,
+    .form-grid,
+    .form-grid--numbers,
+    .project-info-grid
+  ) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .xbl-app-page--schedule .date-selector {
+    justify-content: flex-start;
+  }
+
+  .xbl-app-page--schedule .charts-container {
+    flex-direction: column;
+  }
+
+  .xbl-app-page--schedule .charts-container .chart-box,
+  .xbl-app-page--schedule .charts-container .chart-box.wide {
+    min-width: 0;
+  }
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin: 0 0 0.8em;
+  color: inherit;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.markdown-body h1 {
+  font-size: 1.55rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.35rem;
+}
+
+.markdown-body h3 {
+  font-size: 1.18rem;
+}
+
+.markdown-body p {
+  margin: 0 0 1em;
+  line-height: 1.9;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 1em 1.4em;
+  padding-left: 1.2em;
+}
+
+.markdown-body ul {
+  list-style: disc;
+}
+
+.markdown-body ol {
+  list-style: decimal;
+}
+
+.markdown-body li {
+  list-style: inherit;
+  margin: 0.35em 0;
+  line-height: 1.9;
+}
+
+.markdown-body a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.markdown-body code {
+  padding: 0.12em 0.4em;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.92em;
+}
+
+.markdown-body pre {
+  margin: 0 0 1em;
+  overflow: auto;
+}
+
+.markdown-body pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
 }
 
 .el-message.xbl-feedback-message {
