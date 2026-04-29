@@ -164,6 +164,7 @@ const routePreloaders: Record<string, PageLoader> = {
   '/index/deepseek': () => import('@/modules/blog/views/DeepseekPage.vue'),
   '/index/bookCrawler': () => import('@/modules/crawler/views/BookCrawlerAppPage.vue'),
   '/index/medicalKnowledge': () => import('@/modules/blog/views/MedicalKnowledgePage.vue'),
+  '/index/medicalCaseQc': () => import('@/modules/blog/views/MedicalCaseQcPage.vue'),
   '/index/mail': () => import('@/modules/system/views/MailPage.vue'),
   '/index/message': () => import('@/modules/system/views/MessagePage.vue'),
   '/index/blogInfo': () => import('@/modules/blog/views/BlogInfoPage.vue'),

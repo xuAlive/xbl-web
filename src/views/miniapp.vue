@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, markRaw } from 'vue'
+import { ref, onActivated, onMounted, markRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from '@/shared/ui/feedback'
 import {
@@ -56,7 +56,7 @@ import {
   Notebook,
   Reading
 } from '@element-plus/icons-vue'
-import { getMiniappList, type Miniapp } from '../api/miniapp'
+import { checkMiniappAvailable, checkMiniappRoute, getMiniappList, type Miniapp } from '../api/miniapp'
 
 const router = useRouter()
 const loading = ref(false)
@@ -96,25 +96,36 @@ const openApp = async (app: Miniapp) => {
     return
   }
 
-  if (app.route) {
-    openingApp.value = true
-    try {
-      await router.push(app.route)
-    } finally {
-      openingApp.value = false
+  openingApp.value = true
+  try {
+    const available = await checkMiniappAvailable(app.id)
+    if (!available) {
+      await loadMiniapps()
+      return
     }
-  } else if (app.externalLink) {
-    openingApp.value = true
-    window.open(app.externalLink, '_blank')
-    window.setTimeout(() => {
-      openingApp.value = false
-    }, 400)
-  } else {
-    message.info(`${app.name} 功能开发中...`)
+
+    if (app.route) {
+      const available = await checkMiniappRoute(app.route)
+      if (!available) {
+        await loadMiniapps()
+        return
+      }
+      await router.push(app.route)
+    } else if (app.externalLink) {
+      window.open(app.externalLink, '_blank')
+    } else {
+      message.info(`${app.name} 功能开发中...`)
+    }
+  } finally {
+    openingApp.value = false
   }
 }
 
 onMounted(() => {
+  loadMiniapps()
+})
+
+onActivated(() => {
   loadMiniapps()
 })
 </script>

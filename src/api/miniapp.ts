@@ -53,6 +53,44 @@ export const getMiniappManageList = async () => {
   }
 }
 
+export const checkMiniappRoute = async (route: string, showMessage = true) => {
+  try {
+    const ret = await $get('/miniapp/check-route', { route })
+    if (ret.code === 1) {
+      return true
+    }
+    if (showMessage) {
+      message.warning(ret.codeMessage || '无权限查看或小程序已下架')
+    }
+    return false
+  } catch (error) {
+    console.error('小程序状态校验失败:', error)
+    if (showMessage) {
+      message.error('小程序状态校验失败')
+    }
+    return false
+  }
+}
+
+export const checkMiniappAvailable = async (id: number, showMessage = true) => {
+  try {
+    const ret = await $get(`/miniapp/check/${id}`, {})
+    if (ret.code === 1) {
+      return true
+    }
+    if (showMessage) {
+      message.warning(ret.codeMessage || '无权限查看或小程序已下架')
+    }
+    return false
+  } catch (error) {
+    console.error('小程序状态校验失败:', error)
+    if (showMessage) {
+      message.error('小程序状态校验失败')
+    }
+    return false
+  }
+}
+
 export const offlineMiniapp = async (id: number) => {
   try {
     const ret = await $post('/miniapp/manage/offline', { id })

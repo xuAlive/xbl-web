@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { message } from '@/shared/ui/feedback'
+import { checkMiniappRoute } from '@/api/miniapp'
 
 import { getUserMenus, isLoggedIn } from '@/utils/userInfo'
 
@@ -13,11 +14,23 @@ const alwaysAllowedAfterLogin = [
   '/index/baziFortune',
   '/index/bookCrawler',
   '/index/medicalKnowledge',
+  '/index/medicalCaseQc',
   '/index/timesheet',
   '/index/schedule',
   '/index/calendar',
   '/index/blogEditor'
 ]
+
+const miniappRoutePaths = new Set([
+  '/index/deepseek',
+  '/index/baziFortune',
+  '/index/bookCrawler',
+  '/index/medicalKnowledge',
+  '/index/medicalCaseQc',
+  '/index/timesheet',
+  '/index/schedule',
+  '/index/calendar',
+])
 
 const canAccessRoute = (path: string): boolean => {
   if (alwaysAllowedAfterLogin.includes(path)) {
@@ -108,6 +121,11 @@ const router = createRouter({
           component: () => import('@/modules/blog/views/MedicalKnowledgePage.vue'),
         },
         {
+          path: 'medicalCaseQc',
+          meta: { title: '病例质控', platform: 'pc', keepAlive: true },
+          component: () => import('@/modules/blog/views/MedicalCaseQcPage.vue'),
+        },
+        {
           path: 'mail',
           meta: { title: '邮件', platform: 'pc', keepAlive: true },
           component: () => import('@/modules/system/views/MailPage.vue'),
@@ -183,7 +201,7 @@ const router = createRouter({
 })
 
 // 路由守卫 - 检查登录状态
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   document.title = (to.meta.title as string) || '忘川'
 
   if (whiteList.includes(to.path)) {
@@ -194,6 +212,8 @@ router.beforeEach((to, _from, next) => {
   } else if (!canAccessRoute(to.path)) {
     message.warning('当前角色无权访问该页面')
     next('/index/home')
+  } else if (miniappRoutePaths.has(to.path) && !(await checkMiniappRoute(to.path))) {
+    next('/index/miniapp')
   } else {
     next()
   }
